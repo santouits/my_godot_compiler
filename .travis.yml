@@ -4,23 +4,30 @@ git:
   depth: 1
 
 dist: xenial
-sudo: false
+sudo: true
 
 matrix:
   include:
-    - env: BUILD_NAME=linux_tools PLATFORM=x11 TOOLS=yes TARGET=release_debug
+    - env: BUILD_NAME=linux-tools-gnu-release_debug
       os: linux
-      compiler: gcc
-    - env: BUILD_NAME=linux_javascript PLATFORM=javascript TOOLS=no TARGET=release_debug
-      os: linux
-      compiler: gcc
+      #    - env: BUILD_NAME=linux-tools-llvm-release_debug
+      #      os: linux
 
 before_install:
   - |
+      BRANCH="master"
+      REPOSITORY="https://github.com/godotengine/godot"
+      OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes no_editor_splash=yes"
+
       if [ $TRAVIS_OS_NAME = linux ]; then 
-          sudo apt-get update; sudo apt-get install scons libasound2-dev libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev -y
+      # echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
+      # echo "deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
+      # wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+        sudo apt-get update
+      #  sudo apt-get install clang-8 lldb-8 lld-8 libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev llvm-8-doc llvm-8-examples llvm-8-runtime clang-tools-8 clang-8-doc libclang-common-8-dev libclang-8-dev libclang1-8 clang-format-8 python-clang-8 -y
+        sudo apt-get install scons libasound2-dev libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev -y
       fi
-      if [ $BUILD_NAME = linux_javascript ]; then
+      if [ $BUILD_NAME = javascript ]; then
         git clone --depth 1 https://github.com/juj/emsdk.git
         cd emsdk
         git pull
@@ -28,22 +35,54 @@ before_install:
         ./emsdk activate latest
         source ./emsdk_env.sh
         cd ..
+        ls
       fi
-   
+
 
 install:
   - |
-      git clone --depth=1 --branch=master https://github.com/godotengine/godot godot
+      git clone --depth=1 --branch=$BRANCH $REPOSITORY godot
       cd godot
 
 script:
   - |
-      scons -j3 CC=$CC CXX=$CXX platform=$PLATFORM tools=$TOOLS target=$TARGET
+      # Tools
+      if [ $BUILD_NAME = linux-tools-gnu-release_debug ]; then
+        scons -j3 CC=gcc CXX=g++ platform=x11 tools=yes target=release_debug $OPTIONS
+      fi
+
+      if [ $BUILD_NAME = linux-tools-gnu-debug ]; then
+        scons -j3 CC=gcc CXX=g++ platform=x11 tools=yes target=debug $OPTIONS
+      fi
+
+      if [ $BUILD_NAME = linux-tools-llvm-release_debug ]; then
+        scons -j3 CC=clang CXX=clang++ platform=x11 tools=yes target=release_debug $OPTIONS
+      fi
+
+      if [ $BUILD_NAME = linux-tools-llvm-debug ]; then
+        scons -j3 CC=clang CXX=clang++ platform=x11 tools=yes target=debug $OPTIONS
+      fi
+
+      # Javascript
+      if [ $BUILD_NAME = javascript ]; then
+        scons -j3 platform=javascript target=release_debug $OPTIONS
+        scons -j3 platform=javascript target=release $OPTIONS
+      fi
 
 before_deploy:
   - |
+      rm bin/*.js
+      rm bin/*.wasm
+      zip -r $BUILD_NAME.zip bin/
+      export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d')-$(git log --format=%h -1)}
       cd ..
-      ls godot/bin
+      TEMP_COMMIT="$(git log --format=%h -1)"
+      AUTHOR_NAME="$(git show --pretty=format:%an $TEMP_COMMIT)"
+      AUTHOR_EMAIL="$(git show --pretty=format:%ae $TEMP_COMMIT)"
+      git config --local user.name "$AUTHOR_NAME"
+      git config --local user.email "$AUTHOR_EMAIL"
+      git tag $TRAVIS_TAG
+      ls godot
 
 deploy:
   provider: releases
@@ -51,5 +90,6 @@ deploy:
   api_key: $PERSONAL_ACCESS_TOKEN
   keep-history: true
   file_glob: true
-  file: "godot/bin/*"
+  file: godot/$BUILD_NAME.zip
   all_branches: true
+  overwrite: true
