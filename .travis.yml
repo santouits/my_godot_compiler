@@ -1,0 +1,55 @@
+language: cpp
+
+git:
+  depth: 1
+
+dist: xenial
+sudo: false
+
+matrix:
+  include:
+    - env: BUILD_NAME=linux_tools PLATFORM=x11 TOOLS=yes TARGET=release_debug
+      os: linux
+      compiler: gcc
+    - env: BUILD_NAME=linux_javascript PLATFORM=javascript TOOLS=no TARGET=release_debug
+      os: linux
+      compiler: gcc
+
+before_install:
+  - |
+      if [ $TRAVIS_OS_NAME = linux ]; then 
+          sudo apt-get update; sudo apt-get install scons libasound2-dev libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev -y
+      fi
+      if [ $BUILD_NAME = linux_javascript ]; then
+        git clone --depth 1 https://github.com/juj/emsdk.git
+        cd emsdk
+        git pull
+        ./emsdk install latest
+        ./emsdk activate latest
+        source ./emsdk_env.sh
+        cd ..
+      fi
+   
+
+install:
+  - |
+      git clone --depth=1 --branch=master https://github.com/godotengine/godot godot
+      cd godot
+
+script:
+  - |
+      scons -j3 CC=$CC CXX=$CXX platform=$PLATFORM tools=$TOOLS target=$TARGET
+
+before_deploy:
+  - |
+      cd ..
+      ls godot/bin
+
+deploy:
+  provider: releases
+  skip-cleanup: true
+  api_key: $PERSONAL_ACCESS_TOKEN
+  keep-history: true
+  file_glob: true
+  file: "godot/bin/*"
+  all_branches: true
