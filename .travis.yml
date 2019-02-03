@@ -3,13 +3,13 @@ language: cpp
 git:
   depth: 1
 
-dist: xenial
 sudo: true
 
 matrix:
   include:
-    - env: BUILD_NAME=linux-tools-gnu-release_debug
+    - env: BUILD_NAME=linux-tools-gnu-debug
       os: linux
+      dist: trusty
       #    - env: BUILD_NAME=linux-tools-llvm-release_debug
       #      os: linux
 
