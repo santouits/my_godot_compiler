@@ -10,8 +10,9 @@ matrix:
     - env: BUILD_NAME=linux-tools-gnu-debug
       os: linux
       dist: trusty
-      #    - env: BUILD_NAME=linux-tools-llvm-release_debug
-      #      os: linux
+    - env: BUILD_NAME=linux-tools-gnu-release_debug
+      os: linux
+      dist: trusty
 
 before_install:
   - |
