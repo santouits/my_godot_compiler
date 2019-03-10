@@ -7,25 +7,36 @@ sudo: true
 
 matrix:
   include:
-    - env: BUILD_NAME=linux-tools-gnu-debug
-      os: linux
-      dist: trusty
     - env: BUILD_NAME=linux-tools-gnu-release_debug
       os: linux
-      dist: trusty
+      dist: xenial
+      addons:
+              apt:
+                      sources:
+                              - ubuntu-toolchain-r-test
+                      packages:
+                              - g++-6
+
+    - env: BUILD_NAME=linux-tools-llvm-release_debug
+      os: linux
+      dist: xenial
+      #    - env: BUILD_NAME=linux-tools-gnu-release_debug
+      #      os: linux
+      #      dist: trusty
 
 before_install:
   - |
       BRANCH="master"
       REPOSITORY="https://github.com/godotengine/godot"
-      OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes no_editor_splash=yes"
+      OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes no_editor_splash=yes"
+      # OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes no_editor_splash=yes"
 
       if [ $TRAVIS_OS_NAME = linux ]; then 
-      # echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
-      # echo "deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
-      # wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+        echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
+        echo "deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
         sudo apt-get update
-      #  sudo apt-get install clang-8 lldb-8 lld-8 libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev llvm-8-doc llvm-8-examples llvm-8-runtime clang-tools-8 clang-8-doc libclang-common-8-dev libclang-8-dev libclang1-8 clang-format-8 python-clang-8 -y
+        sudo apt-get install clang-8 lldb-8 lld-8 libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev llvm-8-doc llvm-8-examples llvm-8-runtime clang-tools-8 clang-8-doc libclang-common-8-dev libclang-8-dev libclang1-8 clang-format-8 python-clang-8 -y
         sudo apt-get install scons libasound2-dev libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev -y
       fi
       if [ $BUILD_NAME = javascript ]; then
@@ -38,7 +49,11 @@ before_install:
         cd ..
         ls
       fi
-
+      sudo ln -s /usr/bin/gcc-6 gcc
+      sudo ln -s /usr/bin/g++-6 g++
+      sudo ln -s /usr/bin/clang-8 clang
+      sudo ln -s /usr/bin/clang++-8 clang++
+      sudo ln -s /usr/bin/lld-8 lld
 
 install:
   - |
@@ -49,19 +64,21 @@ script:
   - |
       # Tools
       if [ $BUILD_NAME = linux-tools-gnu-release_debug ]; then
-        scons -j3 CC=gcc CXX=g++ platform=x11 tools=yes target=release_debug $OPTIONS
+        scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=yes target=release_debug $OPTIONS
       fi
 
       if [ $BUILD_NAME = linux-tools-gnu-debug ]; then
-        scons -j3 CC=gcc CXX=g++ platform=x11 tools=yes target=debug $OPTIONS
+      #scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=yes target=debug $OPTIONS
+        scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=yes target=debug $OPTIONS
       fi
 
       if [ $BUILD_NAME = linux-tools-llvm-release_debug ]; then
-        scons -j3 CC=clang CXX=clang++ platform=x11 tools=yes target=release_debug $OPTIONS
+        scons -j3 CC=clang-8 CXX=clang++-8 use_llvm=yes platform=x11 tools=yes target=release_debug $OPTIONS
       fi
 
       if [ $BUILD_NAME = linux-tools-llvm-debug ]; then
-        scons -j3 CC=clang CXX=clang++ platform=x11 tools=yes target=debug $OPTIONS
+      # scons -j3 CC=clang-8 CXX=clang++-8 use_llvm=yes platform=x11 tools=yes target=debug $OPTIONS
+        scons -j3 CC=clang-8 CXX=clang++-8 use_llvm=yes platform=x11 tools=yes target=debug $OPTIONS
       fi
 
       # Javascript
