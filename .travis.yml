@@ -7,7 +7,7 @@ sudo: true
 
 matrix:
   include:
-    - env: BUILD_NAME=linux-tools-gnu-release_debug
+    - env: BUILD_NAME=linux-tools-gnu-debug
       os: linux
       dist: xenial
       addons:
@@ -17,16 +17,24 @@ matrix:
                       packages:
                               - g++-6
 
-    - env: BUILD_NAME=linux-tools-llvm-release_debug
+    - env: BUILD_NAME=linux-tools-llvm-debug
       os: linux
       dist: xenial
-      #    - env: BUILD_NAME=linux-tools-gnu-release_debug
-      #      os: linux
-      #      dist: trusty
+
+    - env: BUILD_NAME=linux-gnu-release
+      os: linux
+      dist: xenial
+      addons:
+              apt:
+                      sources:
+                              - ubuntu-toolchain-r-test
+                      packages:
+                              - g++-6
 
 before_install:
   - |
       BRANCH="master"
+      #      REPOSITORY="https://github.com/santouits/godot"
       REPOSITORY="https://github.com/godotengine/godot"
       OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes no_editor_splash=yes"
       # OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes no_editor_splash=yes"
@@ -35,9 +43,9 @@ before_install:
         echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
         echo "deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-        sudo apt-get update
-        sudo apt-get install clang-8 lldb-8 lld-8 libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev llvm-8-doc llvm-8-examples llvm-8-runtime clang-tools-8 clang-8-doc libclang-common-8-dev libclang-8-dev libclang1-8 clang-format-8 python-clang-8 -y
-        sudo apt-get install scons libasound2-dev libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev -y
+        sudo apt-get -qq update
+        sudo apt-get -qq install clang-8 lldb-8 lld-8 libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev llvm-8-doc llvm-8-examples llvm-8-runtime clang-tools-8 clang-8-doc libclang-common-8-dev libclang-8-dev libclang1-8 clang-format-8 python-clang-8 -y
+        sudo apt-get -qq install scons libasound2-dev libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev -y
       fi
       if [ $BUILD_NAME = javascript ]; then
         git clone --depth 1 https://github.com/juj/emsdk.git
@@ -68,7 +76,6 @@ script:
       fi
 
       if [ $BUILD_NAME = linux-tools-gnu-debug ]; then
-      #scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=yes target=debug $OPTIONS
         scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=yes target=debug $OPTIONS
       fi
 
@@ -77,8 +84,11 @@ script:
       fi
 
       if [ $BUILD_NAME = linux-tools-llvm-debug ]; then
-      # scons -j3 CC=clang-8 CXX=clang++-8 use_llvm=yes platform=x11 tools=yes target=debug $OPTIONS
         scons -j3 CC=clang-8 CXX=clang++-8 use_llvm=yes platform=x11 tools=yes target=debug $OPTIONS
+      fi
+
+      if [ $BUILD_NAME = linux-gnu-release ]; then
+        scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=no target=release $OPTIONS
       fi
 
       # Javascript
