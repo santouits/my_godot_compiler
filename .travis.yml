@@ -7,46 +7,64 @@ sudo: true
 
 matrix:
   include:
-    - env: BUILD_NAME=linux-tools-gnu-debug
+    - env: BUILD_NAME=linux-tools-gnu-debug 
       os: linux
-      dist: xenial
+      dist: trusty
       addons:
               apt:
                       sources:
                               - ubuntu-toolchain-r-test
                       packages:
-                              - g++-6
+                              - g++-9
+
+    - env: BUILD_NAME=linux-tools-gnu-release_debug 
+      os: linux
+      dist: trusty
+      addons:
+              apt:
+                      sources:
+                              - ubuntu-toolchain-r-test
+                      packages:
+                              - g++-9
+
 
     - env: BUILD_NAME=linux-tools-llvm-debug
       os: linux
       dist: xenial
 
-    - env: BUILD_NAME=linux-gnu-release
+    - env: BUILD_NAME=linux-gnu-release-lto
       os: linux
-      dist: xenial
+      dist: trusty
       addons:
               apt:
                       sources:
                               - ubuntu-toolchain-r-test
                       packages:
-                              - g++-6
+                              - g++-9
 
 before_install:
   - |
       BRANCH="master"
       #      REPOSITORY="https://github.com/santouits/godot"
       REPOSITORY="https://github.com/godotengine/godot"
-      OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes no_editor_splash=yes"
+      OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes no_editor_splash=yes use_static_cpp=yes"
       # OPTIONS="verbose=yes builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes no_editor_splash=yes"
 
-      if [ $TRAVIS_OS_NAME = linux ]; then 
-        echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
-        echo "deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" | sudo tee -a /etc/apt/sources.list
+      if [ $TRAVIS_DIST = xenial ]; then 
+        echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main" | sudo tee -a /etc/apt/sources.list
+        echo "deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main" | sudo tee -a /etc/apt/sources.list
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
         sudo apt-get -qq update
-        sudo apt-get -qq install clang-8 lldb-8 lld-8 libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev llvm-8-doc llvm-8-examples llvm-8-runtime clang-tools-8 clang-8-doc libclang-common-8-dev libclang-8-dev libclang1-8 clang-format-8 python-clang-8 -y
+        sudo apt purge *llvm* *clang* 
+        sudo apt autoremove --purge
+        sudo apt-get install clang-9 lld-9 libllvm-9-ocaml-dev libllvm9 llvm-9 llvm-9-dev llvm-9-doc llvm-9-examples llvm-9-runtime clang-tools-9 clang-9-doc libclang-common-9-dev libclang-9-dev libclang1-9 clang-format-9 python-clang-9 -y
+      fi
+
+      if [ $TRAVIS_OS_NAME = linux ]; then
+        sudo apt-get -qq update
         sudo apt-get -qq install scons libasound2-dev libfreetype6-dev libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev -y
       fi
+
       if [ $BUILD_NAME = javascript ]; then
         git clone --depth 1 https://github.com/juj/emsdk.git
         cd emsdk
@@ -57,11 +75,11 @@ before_install:
         cd ..
         ls
       fi
-      sudo ln -s /usr/bin/gcc-6 gcc
-      sudo ln -s /usr/bin/g++-6 g++
-      sudo ln -s /usr/bin/clang-8 clang
-      sudo ln -s /usr/bin/clang++-8 clang++
-      sudo ln -s /usr/bin/lld-8 lld
+      sudo ln -s /usr/bin/gcc-9 gcc
+      sudo ln -s /usr/bin/g++-9 g++
+      sudo ln -s /usr/bin/clang-9 clang
+      sudo ln -s /usr/bin/clang++-9 clang++
+      sudo ln -s /usr/bin/lld-9 lld
 
 install:
   - |
@@ -72,23 +90,23 @@ script:
   - |
       # Tools
       if [ $BUILD_NAME = linux-tools-gnu-release_debug ]; then
-        scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=yes target=release_debug $OPTIONS
+        travis_wait 100 scons -j2 CC=gcc-9 CXX=g++-9 platform=x11 tools=yes target=release_debug $OPTIONS
       fi
 
       if [ $BUILD_NAME = linux-tools-gnu-debug ]; then
-        scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=yes target=debug $OPTIONS
+        scons -j3 CC=gcc-9 CXX=g++-9 platform=x11 tools=yes target=debug $OPTIONS
       fi
 
       if [ $BUILD_NAME = linux-tools-llvm-release_debug ]; then
-        scons -j3 CC=clang-8 CXX=clang++-8 use_llvm=yes platform=x11 tools=yes target=release_debug $OPTIONS
+        scons -j3 CC=clang-9 CXX=clang++-9 use_llvm=yes platform=x11 tools=yes target=release_debug $OPTIONS
       fi
 
       if [ $BUILD_NAME = linux-tools-llvm-debug ]; then
-        scons -j3 CC=clang-8 CXX=clang++-8 use_llvm=yes platform=x11 tools=yes target=debug $OPTIONS
+        scons -j3 CC=clang-9 CXX=clang++-9 use_llvm=yes platform=x11 tools=yes target=debug $OPTIONS
       fi
 
-      if [ $BUILD_NAME = linux-gnu-release ]; then
-        scons -j3 CC=gcc-6 CXX=g++-6 platform=x11 tools=no target=release $OPTIONS
+      if [ $BUILD_NAME = linux-gnu-release-lto ]; then
+        travis_wait 100 scons -j2 CC=gcc-9 CXX=g++-9 platform=x11 tools=no target=release use_lto=yes $OPTIONS
       fi
 
       # Javascript
